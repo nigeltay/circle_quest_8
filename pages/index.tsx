@@ -23,8 +23,9 @@ type GroupBuys = {
 };
 
 export default function Home() {
-  const originalUsdcContract = "0x07865c6E87B9F70255377e024ace6630C1Eaa37F";
-  const groupBuyManagerContract = "0x905F6d8dAfe0475CcFab45Dfdb759CA81Bd210d9";
+  const originalUsdcContract = "0x07865c6E87B9F70255377e024ace6630C1Eaa37F"; //usdc token contract address
+  const groupBuyManagerContract =
+    "Replace with your group buy manager smart contract address here";
 
   //variables
   const [currentWalletAddress, setCurrentWalletAddress] = useState<string>("");
@@ -43,7 +44,7 @@ export default function Home() {
   // whether or not to show the loading dialog
   const [isLoading, setIsLoading] = useState(false);
 
-  // data to display
+  // text data to display on loading dialog
   const [loadedData, setLoadedData] = useState("Loading...");
 
   function openModal() {
@@ -55,7 +56,7 @@ export default function Home() {
   }
 
   //functions
-  const getAllGroupBuys = async () => {
+  async function getAllGroupBuys() {
     const { ethereum } = window;
 
     // Check if MetaMask is installed
@@ -69,6 +70,7 @@ export default function Home() {
     });
     // Get the first account address
     const walletAddr = accounts[0];
+    //set to variable to store current wallet address
     setCurrentWalletAddress(walletAddr);
 
     if (ethereum) {
@@ -76,52 +78,26 @@ export default function Home() {
       const signer = provider.getSigner();
 
       // Create a contract instance of your deployed GroupBuy Manager contract
-      const groupBuyContractManager = new ethers.Contract(
-        groupBuyManagerContract,
-        GroupBuyManagerABI,
-        signer
-      );
+      // 1) add code here
 
-      //call the getGroupBuys function from the contract to get all addresses
-      const groupBuysAddresses = await groupBuyContractManager.getGroupBuys();
+      // call the getGroupBuys function from the contract to get all addresses
+      // 2) add code here
 
-      //call getGroupBuyInfo function from contract
-      const groupBuys = await groupBuyContractManager.getGroupBuyInfo(
-        groupBuysAddresses
-      );
+      // call getGroupBuyInfo function from contract
+      // 3) add code here
 
-      //loop through data and iterate
+      // declare new array
       let new_groupBuys = [];
 
-      for (let i = 0; i < groupBuys.endTime.length; i++) {
-        let endTime: number = groupBuys.endTime[i].toNumber();
-        let groupBuyState: number = groupBuys.groupBuyState[i].toNumber();
-        // console.log("--group buy price in blockchain: " + groupBuys.price[i]);
-        let price = groupBuys.price[i]; //
-        let productName: string = groupBuys.productName[i];
-        let productDescription: string = groupBuys.productDescription[i];
+      // loop through array and add it into a new array
+      // 4) add code here
 
-        let sellerAddress: string = groupBuys.seller[i];
-
-        let newGroupBuy = {
-          endTime: endTime,
-          price: (price / 1000000).toString(),
-          seller: sellerAddress.toLowerCase(),
-          groupBuyState: groupBuyState,
-          productName: productName,
-          productDescription: productDescription,
-          groupBuyAddress: groupBuysAddresses[i],
-          buyers: [],
-        };
-        new_groupBuys.push(newGroupBuy);
-      }
-
-      //set to variable
-      setAllGroupBuys(new_groupBuys);
+      // set to variable
+      // 5) add code here
     }
-  };
+  }
 
-  const createGroupBuy = async () => {
+  async function createGroupBuy() {
     try {
       //check if required fields are empty
       if (
@@ -133,10 +109,20 @@ export default function Home() {
         return alert("Fill all the fields");
       }
 
+      //check if fields meet requirements
+      if (createGroupBuyFields.price < 0) {
+        return alert("Price must be more than 0");
+      }
+
+      if (createGroupBuyFields.endTime < 5) {
+        return alert("Duration must be more than 5 mins");
+      }
+
       //call create groupbuy function from the contract
       const { ethereum } = window;
 
       if (ethereum) {
+        //set loading modal to open and loading modal text
         setLoadedData("Creating group buy...Please wait");
         openModal();
 
@@ -149,24 +135,18 @@ export default function Home() {
           GroupBuyManagerABI,
           signer
         );
-        //call create groupbuy function from the contract
-        let { hash } = await groupBuyContractManager.createGroupbuy(
-          createGroupBuyFields.endTime * 60, // Converting minutes to seconds
-          ethers.utils.parseUnits(createGroupBuyFields.price.toString(), 6), //ethers.utils.parseEther(createGroupBuyFields.price.toString()),
-          createGroupBuyFields.productName,
-          createGroupBuyFields.productDescription,
-          {
-            gasLimit: 1200000,
-          }
-        );
+
+        // call create groupbuy function from the contract
+        // 1) add code here
 
         //wait for transaction to be mined
-        console.log("Transaction sent! Hash:", hash);
-        await provider.waitForTransaction(hash);
+        // 2) add code here
 
-        console.log("Transaction mined!");
+        //close modal
         closeModal();
-        alert(`Transaction sent! Hash: ${hash}`);
+
+        //display alert message
+        // 3) add code here
 
         //call allGroupbuys to refresh the current list
         await getAllGroupBuys();
@@ -185,7 +165,7 @@ export default function Home() {
       alert(`Error: ${error}`);
       return `${error}`;
     }
-  };
+  }
 
   async function setActiveGroupBuy(groupBuy: GroupBuys) {
     const { ethereum } = window;
@@ -201,10 +181,10 @@ export default function Home() {
         signer
       );
 
-      //get all current buyers(address) and price(same for all)
+      //get all current buyers(address)
       let allCurrentBuyers = await groupBuyContract.getAllOrders();
 
-      //set current group buy to active
+      //set current group buy to active and update the buyers field
       setGroupBuyToActive({
         ...groupBuy,
         buyers: allCurrentBuyers,
@@ -212,6 +192,119 @@ export default function Home() {
     }
   }
 
+  async function placeOrder(currentActiveGroupBuy: GroupBuys | null) {
+    try {
+      const { ethereum } = window;
+
+      if (ethereum) {
+        // check if the active group buy is null
+        if (currentActiveGroupBuy == null) {
+          return;
+        }
+        //open loading modal and set loading text
+        setLoadedData("Getting approval...please wait");
+        openModal();
+
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+
+        // create USDC contract instance
+        const usdcContract = new ethers.Contract(
+          originalUsdcContract,
+          USDCABI,
+          signer
+        );
+
+        // call approval function to give permission to transfer USDC from user wallet to groupbuy smart contract
+        // 1) add code here
+
+        // wait for transaction to be mined
+        // 2) add code here
+
+        closeModal();
+
+        //after giving approval we will palce our order here
+        setLoadedData("Placing Order...please wait");
+        openModal();
+
+        // create groupBuy contract instance
+        const groupBuyContract = new ethers.Contract(
+          currentActiveGroupBuy.groupBuyAddress,
+          GroupBuyABI,
+          signer
+        );
+
+        // call place order function from group buy contract
+        // 3) add code here
+
+        // Wait till the transaction is mined
+        // 4) add code here
+
+        closeModal();
+
+        // display alert mesaage
+        // 5) add code here
+
+        //get updated buyers
+        //get all current buyers(address) and price(same for all)
+        let allCurrentBuyers = await groupBuyContract.getAllOrders();
+
+        //set current group buy to active
+        setGroupBuyToActive({
+          ...currentActiveGroupBuy,
+          buyers: allCurrentBuyers,
+        });
+      }
+    } catch (error) {
+      closeModal();
+      alert(`Error: ${error}`);
+      return `${error}`;
+    }
+  }
+
+  async function withdrawFunds(currentActiveGroupBuy: GroupBuys | null) {
+    try {
+      const { ethereum } = window;
+
+      if (ethereum) {
+        if (currentActiveGroupBuy == null) {
+          return;
+        }
+
+        // open modal and set loading text
+        setLoadedData("Withdrawing funds...Please wait");
+        openModal();
+
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+
+        //create groupBuy contract instance
+        const groupBuyContract = new ethers.Contract(
+          currentActiveGroupBuy.groupBuyAddress,
+          GroupBuyABI,
+          signer
+        );
+
+        //call withdraw funds function from group buy contract
+        // 1) add code here
+
+        // Wait till the transaction is mined
+        // 2) add code here
+
+        setIsLoading(false);
+        closeModal();
+        // display slert message
+        // 3) add code here
+      }
+    } catch (error) {
+      console.log(error);
+      closeModal();
+      alert(`Error: ${error}`);
+      return `${error}`;
+    }
+  }
+
+  //render functions
   function renderGroupBuys(groupBuy: GroupBuys) {
     let state = "";
     if (groupBuy.groupBuyState === 0) {
@@ -412,112 +505,6 @@ export default function Home() {
     );
   }
 
-  async function placeOrder(currentActiveGroupBuy: GroupBuys | null) {
-    try {
-      const { ethereum } = window;
-
-      if (ethereum) {
-        if (currentActiveGroupBuy == null) {
-          return;
-        }
-        setLoadedData("Getting approval...please wait");
-        openModal();
-
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-
-        //give current conttact approval to take USDC from user wallet
-        const usdcContract = new ethers.Contract(
-          originalUsdcContract,
-          USDCABI,
-          signer
-        );
-
-        const usdcApprovalTxn = await usdcContract.approve(
-          currentActiveGroupBuy.groupBuyAddress,
-          ethers.utils.parseUnits("1000", 6)
-        );
-        //wait for transaction to be mined
-
-        await usdcApprovalTxn.wait();
-
-        closeModal();
-
-        setLoadedData("Placing Order...please wait");
-        openModal();
-        //create groupbuy contract instance
-        const groupBuyContract = new ethers.Contract(
-          currentActiveGroupBuy.groupBuyAddress,
-          GroupBuyABI,
-          signer
-        );
-
-        //call place order function from group buy contract
-        let { hash } = await groupBuyContract.placeOrder({
-          gasLimit: 700000,
-        });
-        console.log("Transaction sent! Hash:", hash);
-        await provider.waitForTransaction(hash); // Wait till the transaction is mined
-        console.log("Transaction mined!");
-        closeModal();
-        alert(`Transaction sent! Hash: ${hash}`);
-
-        //get updated buyers
-
-        //get all current buyers(address) and price(same for all)
-        let allCurrentBuyers = await groupBuyContract.getAllOrders();
-
-        //set current group buy to active
-        setGroupBuyToActive({
-          ...currentActiveGroupBuy,
-          buyers: allCurrentBuyers,
-        });
-      }
-    } catch (error) {
-      closeModal();
-      console.log(error);
-      alert(`Error: ${error}`);
-      return `${error}`;
-    }
-  }
-
-  async function withdrawFunds(currentActiveGroupBuy: GroupBuys | null) {
-    try {
-      const { ethereum } = window;
-
-      if (ethereum) {
-        if (currentActiveGroupBuy == null) {
-          return;
-        }
-        setLoadedData("Withdrawing funds...Please wait");
-        openModal();
-        const provider = new ethers.providers.Web3Provider(ethereum);
-        const signer = provider.getSigner();
-
-        //create groupBuy contract instance
-        const groupBuyContract = new ethers.Contract(
-          currentActiveGroupBuy.groupBuyAddress,
-          GroupBuyABI,
-          signer
-        );
-
-        //call place order function from group buy contract
-        let { hash } = await groupBuyContract.withdrawFunds();
-        console.log("Transaction sent! Hash:", hash);
-        await provider.waitForTransaction(hash); // Wait till the transaction is mined
-        console.log("Transaction mined!");
-
-        setIsLoading(false);
-        closeModal();
-        alert(`Transaction sent! Hash: ${hash}`);
-      }
-    } catch (error) {
-      console.log(error);
-      closeModal();
-      alert(`Error: ${error}`);
-      return `${error}`;
-    }
-  }
   const customStyles = {
     content: {
       top: "50%",
